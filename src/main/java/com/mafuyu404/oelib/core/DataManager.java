@@ -23,6 +23,7 @@ import net.minecraft.util.profiling.ProfilerFiller;
 import java.lang.reflect.Field;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.function.Predicate;
 
 /**
  * 通用数据管理器。
@@ -113,8 +114,14 @@ public class DataManager<T> implements SimpleResourceReloadListener<Map<Resource
         return CompletableFuture.supplyAsync(() -> {
             Map<ResourceLocation, JsonElement> data = new HashMap<>();
             String folder = getFolder(dataClass);
+            String modid = annotation.modid();
 
-            manager.listResources(folder, path -> path.getPath().endsWith(".json")).forEach((rl, resource) -> {
+            Predicate<ResourceLocation> filter = path -> path.getPath().endsWith(".json");
+            if (!modid.isEmpty()) {
+                filter = filter.and(path -> path.getNamespace().equals(modid));
+            }
+
+            manager.listResources(folder, filter).forEach((rl, resource) -> {
                 try {
                     JsonElement json = GSON.fromJson(resource.openAsReader(), JsonElement.class);
                     data.put(rl, json);
@@ -122,6 +129,8 @@ public class DataManager<T> implements SimpleResourceReloadListener<Map<Resource
                     OElib.LOGGER.error("Failed to load JSON from {}", rl, e);
                 }
             });
+
+            OElib.LOGGER.info("(oelib) Loading {} data from {} files: {}", dataClass.getSimpleName(), data.size(), data.keySet());
 
             return data;
         }, executor);
@@ -403,12 +412,6 @@ public class DataManager<T> implements SimpleResourceReloadListener<Map<Resource
     private static String getFolder(Class<?> dataClass) {
         DataDriven annotation = dataClass.getAnnotation(DataDriven.class);
         String folder = annotation.folder();
-        String modid = annotation.modid();
-
-        // 如果指定了modid，则在文件夹路径前加上modid
-        if (!modid.isEmpty()) {
-            return modid + "/" + folder;
-        }
 
         return folder;
     }
@@ -438,3 +441,4 @@ public class DataManager<T> implements SimpleResourceReloadListener<Map<Resource
         }
     }
 }
+
