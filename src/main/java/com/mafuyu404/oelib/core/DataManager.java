@@ -411,9 +411,8 @@ public class DataManager<T> implements SimpleResourceReloadListener<Map<Resource
 
     private static String getFolder(Class<?> dataClass) {
         DataDriven annotation = dataClass.getAnnotation(DataDriven.class);
-        String folder = annotation.folder();
 
-        return folder;
+        return annotation.folder();
     }
 
     @SuppressWarnings("unchecked")
